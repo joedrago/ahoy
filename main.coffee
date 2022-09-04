@@ -5,6 +5,7 @@ puppeteer = require 'puppeteer'
 StreamZip = require 'node-stream-zip'
 dircompare = require 'dir-compare'
 
+
 pad = (s, fill = '0', count = 2) ->
   s = String(s)
   while s.length < count
@@ -14,6 +15,8 @@ pad = (s, fill = '0', count = 2) ->
 generateNowString = ->
   d = new Date()
   return "#{d.getFullYear()}#{pad(d.getMonth()+1)}#{pad(d.getDate())}-#{pad(d.getHours())}#{pad(d.getMinutes())}#{pad(d.getSeconds())}"
+
+backupTimestamp = generateNowString()
 
 makeFreshDownloadDir = (dir) ->
   if (fs.existsSync(dir))
@@ -44,11 +47,10 @@ findLatestFileLinks = (modName) ->
   sidebarLinks = await page.$$eval '.cf-recentfiles > li > div > a.overflow-tip', (elements) ->
     return elements.map (e) ->
       { href: e.href, name: e.dataset.name }
-
   await browser.close()
 
   if sidebarTitles.length != sidebarLinks.length
-    console.ERROR "findLatestFileLinks() is probably messed up. Please debug with mod name \"#{modName}\"."
+    console.error "findLatestFileLinks() is probably messed up. Please debug with mod name \"#{modName}\"."
     return null
 
   results = []
@@ -67,7 +69,7 @@ waitForFile = (downloadDir, timeout) ->
     remainingTime = timeout
     interval = setInterval(->
       downloadedFilenames = fs.readdirSync(downloadDir)
-      console.log "checking files: ", downloadedFilenames
+      # console.log "checking files: ", downloadedFilenames
       if downloadedFilenames.length > 0 and not downloadedFilenames[0].match(/crdownload/)
         clearInterval(interval)
         resolve(true)
@@ -147,11 +149,11 @@ downloadLatestZip = (modName, versionFilter, tempOutputPath) ->
   await zip.close()
   return null
 
-updateMod = (modName, versionFilter, wowAddonsDir, wowAddonsBackupDir) ->
-  tmpDir = "tmp.ahoy.download"
+updateMod = (modName, versionFilter, wowAddonsDir, wowAddonsBackupDir, configFileDir) ->
+  tmpDir = path.resolve(configFileDir, "tmp.ahoy.download.#{modName}")
   err = await downloadLatestZip(modName, versionFilter, tmpDir)
   if err?
-    console.err "Failed to download latest zip: #{err}"
+    console.error "Failed to download latest zip: #{err}"
     return
 
   extractedDir = path.resolve(tmpDir, "extracted")
@@ -176,7 +178,7 @@ updateMod = (modName, versionFilter, wowAddonsDir, wowAddonsBackupDir) ->
         # console.log "Up to date."
         needsMove = false
       else
-        backupPath = path.resolve(wowAddonsBackupDir, "#{dir}.#{generateNowString()}")
+        backupPath = path.resolve(wowAddonsBackupDir, "#{dir}.#{backupTimestamp}")
         console.log "Backup: #{backupPath}"
         fs.renameSync(dstPath, backupPath)
 
@@ -227,6 +229,8 @@ main = ->
     console.error("ERROR: No config file found: #{configFilename}")
     return
 
+  configFileDir = path.dirname(fs.realpathSync(configFilename))
+
   console.log "Config: #{configFilename}"
 
   configs = JSON.parse(fs.readFileSync(configFilename, "utf8"))
@@ -235,12 +239,12 @@ main = ->
       console.error("ERROR: Config requires: addonsDir, backupDir, version, mods")
       return
 
-    config.addonsDir = path.resolve(config.addonsDir)
+    config.addonsDir = path.resolve(configFileDir, config.addonsDir)
     if not dirExists(config.addonsDir)
       console.error("ERROR: addonsDir doesn't exist: #{addonsDir}")
       return
 
-    config.backupDir = path.resolve(config.backupDir)
+    config.backupDir = path.resolve(configFileDir, config.backupDir)
     if not dirExists(config.backupDir)
       console.log "Creating backup dir: #{config.backupDir}"
       fs.mkdirSync(config.backupDir, { recursive: true })
@@ -265,7 +269,8 @@ main = ->
         console.log "\n[#{modIndex+1}/#{modCount}] Skipping #{mod}..."
         continue
       console.log "\n[#{modIndex+1}/#{modCount}] Updating #{mod}..."
-      await updateMod(mod, config.version, config.addonsDir, config.backupDir)
+      await updateMod(mod, config.version, config.addonsDir, config.backupDir, configFileDir)
+
 
   console.log "\n------------------------------------------------------------------------------"
   console.log "\nAll configs complete!"
