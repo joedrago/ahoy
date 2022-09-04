@@ -1,0 +1,21 @@
+{
+  "name": "ahoy",
+  "version": "0.0.1",
+  "bin": {
+    "ahoy": "bin/ahoy"
+  },
+  "scripts": {
+    "build": "coffee -o build -c main.coffee"
+  },
+  "author": "Joe Drago",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "coffeescript": "^2.7.0",
+    "dir-compare": "^4.0.0",
+    "minimist": "^1.2.6",
+    "node-stream-zip": "^1.15.0",
+    "puppeteer": "^17.1.0",
+    "rimraf": "^3.0.2"
+  }
+}

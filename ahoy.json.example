@@ -1,0 +1,20 @@
+[
+    {
+        "addonsDir": "_retail_/Interface/Addons",
+        "backupDir": "ahoy.backup/retail",
+        "version": "Retail",
+        "mods": [
+            "TellMeWhen",
+            "Details"
+        ]
+    },
+    {
+        "addonsDir": "_classic_/Interface/Addons",
+        "backupDir": "ahoy.backup/classic",
+        "version": "Lich King Classic",
+        "mods": [
+            "TellMeWhen",
+            "Details"
+        ]
+    }
+]
